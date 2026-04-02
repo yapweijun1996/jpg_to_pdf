@@ -1,99 +1,100 @@
 # JPG to PDF Converter
 
-纯前端、本地运行的 JPG 转 PDF 工具。  
-图片不会上传到服务器，PDF 在浏览器内生成，历史记录保存在当前设备的 IndexedDB。
+A pure frontend, locally running JPG to PDF converter.  
+Images never leave the browser, PDFs are generated on-device, and conversion history is stored in IndexedDB on the current machine.
 
 ## Features
 
-- 纯静态前端，无 Node.js 后端、无云端转换
-- 支持拖放或选择多个 JPG/JPEG 文件
-- 支持转换前预览、排序、移除单张图片
-- 使用本地 `pdf-lib` 在浏览器中生成 PDF
-- IndexedDB 历史记录
-- 历史记录自动限制在 `50MB` 内，超出后自动删除最旧项目
-- PWA 支持，可安装到本机
-- 支持离线打开
-- 支持多语言：English、中文、日本語、Bahasa Melayu
+- Pure static frontend with no Node.js backend
+- No cloud upload and no remote conversion
+- Drag and drop or choose multiple JPG/JPEG files
+- Preview, reorder, and remove images before conversion
+- Generate PDFs locally in the browser using a vendored `pdf-lib`
+- IndexedDB-based conversion history
+- Automatic history cleanup after `50MB`
+- PWA support with offline app shell
+- Automatic frontend update checks
+- Multi-language UI: English, Chinese, Japanese, and Malay
 
 ## Project Structure
 
-- [index.html](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/index.html): 页面结构
-- [styles.css](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/styles.css): UI / UX 样式
-- [app.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/app.js): 前端逻辑、转换流程、IndexedDB、PWA
-- [i18n.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/i18n.js): 多语言文案与格式化工具
-- [service-worker.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/service-worker.js): PWA 缓存与更新逻辑
+- [index.html](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/index.html): app shell and markup
+- [styles.css](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/styles.css): UI and layout styling
+- [app.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/app.js): app logic, conversion flow, IndexedDB, and PWA behavior
+- [i18n.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/i18n.js): translations and formatting helpers
+- [service-worker.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/service-worker.js): cache and update logic
 - [manifest.json](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/manifest.json): PWA manifest
-- [icons/](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/icons): 本地图标资源
-- [vendor/pdf-lib.min.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/vendor/pdf-lib.min.js): 本地 vendored PDF 库
+- [icons/](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/icons): local app icons
+- [vendor/pdf-lib.min.js](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/vendor/pdf-lib.min.js): vendored PDF library
 
-## Run
+## Running the App
 
-这是纯静态项目，可以用以下任一方式打开：
+This is a static frontend project. You can use it in either of these ways:
 
-1. 直接打开 [index.html](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/index.html)
-2. 用任意静态服务器启动后访问，例如本地开发服务器、Live Server、或其他 static host
+1. Open [index.html](/mnt/c/Users/tno/Documents/GitHub/jpg_to_pdf/index.html) directly
+2. Serve the folder with any static server and open it in the browser
 
-说明：
+Notes:
 
-- `file://` 模式下基本功能可用
-- 若要完整使用 PWA、Service Worker、安装到桌面、自动更新，建议通过 `http://localhost/...` 访问
+- `file://` mode supports the core conversion flow
+- For full PWA behavior, service worker support, installability, and automatic updates, use `http://localhost/...` or another `http/https` origin
 
 ## How It Works
 
-1. 选择或拖入 JPG/JPEG 文件
-2. 在页面中调整顺序
-3. 点击 `Convert to PDF`
-4. 浏览器本地生成 PDF
-5. 下载结果，并写入本地历史记录
+1. Select or drop JPG/JPEG files
+2. Reorder them in the workspace
+3. Click `Convert to PDF`
+4. The browser generates the PDF locally
+5. Download the result and save it to local history
 
-转换时会优先按 JPEG 原始数据嵌入；如果图片虽然扩展名是 `.jpg` 但内容不完全符合标准 JPEG，应用会尝试先由浏览器解码，再转成 PNG 后写入 PDF。
+The app first tries to embed each file as a native JPEG. If a file has a `.jpg` extension but is not a clean standard JPEG internally, the app falls back to browser decoding and re-rasterizes it as PNG before writing it into the PDF.
 
 ## History Storage
 
-历史记录保存在 IndexedDB，记录内容包括：
+History is stored in IndexedDB and includes:
 
-- 输出文件名
-- 生成时间
-- 页数
-- PDF 大小
-- 来源文件名
-- 部分失败时的跳过文件名
-- PDF Blob
+- output file name
+- generation timestamp
+- page count
+- PDF size
+- source file names
+- skipped file names for partial conversions
+- PDF Blob data
 
-存储策略：
+Storage policy:
 
-- 上限为 `50MB`
-- 每次成功保存历史后都会自动检查容量
-- 超过上限时，会从最旧记录开始删除
-- 至少保留最新一条记录
+- hard limit of `50MB`
+- checked after every successful save
+- oldest entries are removed first when the limit is exceeded
+- the newest entry is always retained
 
 ## PWA Behavior
 
-- 首次通过 `http/https` 打开后会注册 Service Worker
-- App Shell 会缓存到本地，支持离线打开
-- 页面会主动检查更新
-- 检测到新版本后会自动切换到最新前端代码
+- A service worker is registered when the app is opened on `http/https`
+- The app shell is cached locally for offline loading
+- The app actively checks for frontend updates
+- When a newer version is detected, the PWA switches to the latest frontend code automatically
 
-如果你改了源码但浏览器还显示旧版本：
+If the browser still shows an older version after you changed the source:
 
-1. 强制刷新页面
-2. 关闭旧标签页后重新打开
-3. 必要时在浏览器 DevTools 中 unregister 旧的 Service Worker
+1. hard refresh the page
+2. close old tabs and reopen the app
+3. if needed, unregister the old service worker in DevTools
 
 ## Browser Notes
 
-- 推荐使用较新的 Chrome、Edge、Firefox
-- 仅接受 JPG/JPEG 文件作为输入
-- 超大图片或超大量文件在浏览器中会占用较多内存
+- Recommended: recent Chrome, Edge, or Firefox
+- Input is limited to JPG/JPEG files
+- Very large images or very large batches can consume significant browser memory
 
 ## Development Notes
 
-- 本项目当前不依赖打包工具
-- 所有资源均为本地文件
-- 不使用 CDN
-- 不使用后端 API
-- 不使用远程图片上传
+- No bundler is required
+- All assets are local
+- No CDN is used
+- No backend API is used
+- No remote upload is used
 
 ## License
 
-如需补充许可证，请在此仓库中添加正式 license 文件。
+Add a license file to the repository if you want to publish this project with an explicit license.
