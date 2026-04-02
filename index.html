@@ -3,90 +3,793 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#28a745">
+    <meta name="description" content="Convert JPG images to PDF files">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="JPG→PDF">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icons/icon.svg">
     <title>JPG to PDF Converter</title>
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #28a745;
+            --green-dark: #1e7e34;
+            --green-light: #d4edda;
+            --red: #dc3545;
+            --red-light: #f8d7da;
+            --gray: #6c757d;
+            --gray-light: #f4f4f4;
+            --radius: 8px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: var(--gray-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
         }
-        .container {
-            max-width: 600px;
-            margin: auto;
+
+        /* Banner */
+        #banner {
+            display: none;
+            width: 100%;
+            max-width: 560px;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        #banner.offline { background: var(--red-light); color: var(--red); display: block; }
+        #banner.online  { background: var(--green-light); color: var(--green-dark); display: block; }
+
+        /* Card */
+        .card {
             background: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 560px;
         }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            gap: 8px;
         }
-        input[type="file"] {
-            margin-bottom: 20px;
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #222;
+            flex: 1;
         }
-        button {
-            padding: 10px 15px;
-            background-color: #28a745;
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* Language selector */
+        #langSelect {
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            padding: 6px 10px;
+            font-size: 13px;
+            background: white;
+            cursor: pointer;
+            color: #444;
+        }
+        #langSelect:focus { outline: 2px solid var(--green); }
+
+        /* Icon buttons */
+        .btn-icon {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--gray);
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-icon:hover { background: var(--gray-light); color: #333; }
+
+        /* Drop zone */
+        #dropZone {
+            border: 2px dashed #ccc;
+            border-radius: var(--radius);
+            padding: 32px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        #dropZone:hover, #dropZone.dragover {
+            border-color: var(--green);
+            background: #f0fff4;
+        }
+        #dropZone .drop-icon { font-size: 36px; margin-bottom: 8px; }
+        #dropZone .drop-label { font-size: 15px; color: #555; font-weight: 500; }
+        #dropZone .drop-sub { font-size: 12px; color: #999; margin-top: 4px; }
+        #fileInput { display: none; }
+
+        /* File count badge */
+        #fileCount {
+            display: none;
+            font-size: 13px;
+            color: var(--green-dark);
+            background: var(--green-light);
+            border-radius: 20px;
+            padding: 4px 12px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        /* Convert button */
+        #convertButton {
+            width: 100%;
+            padding: 13px;
+            background: var(--green);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: var(--radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        #convertButton:hover:not(:disabled) { background: var(--green-dark); }
+        #convertButton:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Progress bar */
+        #progressWrap {
+            display: none;
+            margin-top: 16px;
+        }
+        #progressBar {
+            width: 100%;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        #progressFill {
+            height: 100%;
+            background: var(--green);
+            width: 0%;
+            transition: width 0.3s;
+            animation: indeterminate 1.4s infinite ease-in-out;
+        }
+        @keyframes indeterminate {
+            0%   { transform: translateX(-100%); width: 60%; }
+            100% { transform: translateX(200%); width: 60%; }
+        }
+        #progressLabel { font-size: 13px; color: var(--gray); margin-top: 6px; text-align: center; }
+
+        /* Message */
+        #message {
+            margin-top: 16px;
+            font-size: 14px;
+            border-radius: var(--radius);
+            padding: 10px 14px;
+            display: none;
+        }
+        #message.success { background: var(--green-light); color: var(--green-dark); display: block; }
+        #message.error   { background: var(--red-light);   color: var(--red);        display: block; }
+        #message a { color: var(--green-dark); font-weight: 600; }
+
+        /* Install button */
+        #installBtn {
+            display: none;
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px;
+            background: white;
+            color: var(--green);
+            border: 2px solid var(--green);
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        #installBtn:hover { background: var(--green-light); }
+
+        /* Modal overlay */
+        #modalOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        #modalOverlay.open { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 480px;
+            padding: 28px 24px;
+            position: relative;
+            animation: fadeUp 0.2s ease;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .modal h2 { font-size: 18px; margin-bottom: 16px; color: #222; }
+        .modal ol { padding-left: 20px; }
+        .modal li { font-size: 14px; color: #444; line-height: 1.7; margin-bottom: 8px; }
+        .modal-close {
+            margin-top: 20px;
+            width: 100%;
+            padding: 10px;
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
         }
-        button:hover {
-            background-color: #218838;
+        .modal-close:hover { background: var(--green-dark); }
+
+        /* History */
+        #historyCard {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 20px 24px;
+            width: 100%;
+            max-width: 560px;
+            margin-top: 16px;
         }
-        #message {
-            margin-top: 20px;
+        #historyCard h2 { font-size: 15px; font-weight: 700; color: #444; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        #historyCard h2 button { background: none; border: none; font-size: 12px; color: var(--gray); cursor: pointer; text-decoration: underline; }
+        #historyCard h2 button:hover { color: var(--red); }
+        #historyList { list-style: none; }
+        #historyList li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+            color: #555;
         }
+        #historyList li:last-child { border-bottom: none; }
+        #historyList li .hist-time { color: #aaa; font-size: 11px; margin-left: 8px; white-space: nowrap; }
+        #historyList li a { color: var(--green-dark); font-weight: 600; text-decoration: none; }
+        #historyList li a:hover { text-decoration: underline; }
+        #historyEmpty { font-size: 13px; color: #aaa; text-align: center; padding: 8px 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>JPG to PDF Converter</h1>
-        <input type="file" id="fileInput" webkitdirectory multiple>
-        <button id="convertButton">Convert</button>
-        <div id="message"></div>
+    <div id="banner"></div>
+
+    <div class="card">
+        <div class="header">
+            <h1 id="titleText"></h1>
+            <div class="header-actions">
+                <select id="langSelect" aria-label="Language"></select>
+                <button class="btn-icon" id="guideBtn" title="User Guide">?</button>
+            </div>
+        </div>
+
+        <div id="dropZone" role="button" tabindex="0" aria-label="Select files">
+            <div class="drop-icon">🖼️</div>
+            <div class="drop-label" id="dropLabel"></div>
+            <div class="drop-sub">JPG</div>
+        </div>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg" multiple>
+
+        <div id="fileCount"></div>
+
+        <button id="convertButton"></button>
+
+        <div id="progressWrap">
+            <div id="progressBar"><div id="progressFill"></div></div>
+            <div id="progressLabel"></div>
+        </div>
+
+        <div id="message" role="alert"></div>
+        <button id="installBtn"></button>
     </div>
+
+    <!-- History Card -->
+    <div id="historyCard" style="display:none">
+        <h2 id="historyTitle">
+            <span id="historyTitleText"></span>
+            <button id="clearHistoryBtn"></button>
+        </h2>
+        <ul id="historyList"></ul>
+        <p id="historyEmpty" style="display:none"></p>
+    </div>
+
+    <!-- User Guide Modal -->
+    <div id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <h2 id="modalTitle"></h2>
+            <ol id="modalSteps"></ol>
+            <button class="modal-close" id="modalClose"></button>
+        </div>
+    </div>
+
+    <script src="./i18n.js"></script>
+    <script src="./vendor/pdf-lib.min.js"></script>
     <script>
-        document.getElementById('convertButton').addEventListener('click', async () => {
-            const fileInput = document.getElementById('fileInput');
-            const files = Array.from(fileInput.files);
+        // ── Language ──────────────────────────────────────────────
+        const langSelect = document.getElementById('langSelect');
 
-            if (files.length === 0) {
-                document.getElementById('message').innerText = "Please select a folder containing .jpg files.";
-                return;
-            }
+        function initLang() {
+            getSupportedLangs().forEach(code => {
+                const opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = getLanguageName(code);
+                langSelect.appendChild(opt);
+            });
+            langSelect.value = getLang();
+        }
 
-            // Select and sort all .jpg files
-            const jpgFiles = files.filter(file => file.name.endsWith('.jpg')).sort((a, b) => {
-                const numA = parseInt(a.name.match(/(\d+)/)?.[0] || 0, 10);
-                const numB = parseInt(b.name.match(/(\d+)/)?.[0] || 0, 10);
-                return numA - numB;
+        function applyTranslations() {
+            document.documentElement.lang = getLang();
+            document.title = t('appTitle');
+            document.getElementById('titleText').textContent    = t('appTitle');
+            document.getElementById('dropLabel').textContent    = t('selectFiles');
+            document.getElementById('convertButton').textContent = t('convert');
+            document.getElementById('guideBtn').title           = t('guide');
+            document.getElementById('installBtn').textContent   = t('installPrompt');
+            document.getElementById('modalTitle').textContent   = t('guideTitle');
+            document.getElementById('modalClose').textContent   = t('guideClose');
+
+            const steps = document.getElementById('modalSteps');
+            steps.innerHTML = '';
+            tArr('guideSteps').forEach(step => {
+                const li = document.createElement('li');
+                li.innerHTML = step;
+                steps.appendChild(li);
             });
 
-            if (jpgFiles.length === 0) {
-                document.getElementById('message').innerText = "No .jpg files found.";
-                return;
-            }
+            updateFileCount();
+        }
 
-            const formData = new FormData();
-            jpgFiles.forEach(file => formData.append('files', file));
+        langSelect.addEventListener('change', () => {
+            setLang(langSelect.value);
+            applyTranslations();
+            updateOnlineStatus();
+            renderHistory().catch(console.error);
+        });
 
-            document.getElementById('message').innerText = `Converting ${jpgFiles.length} files to PDF...`;
+        // ── File selection ────────────────────────────────────────
+        const dropZone   = document.getElementById('dropZone');
+        const fileInput  = document.getElementById('fileInput');
+        const fileCount  = document.getElementById('fileCount');
+        let selectedFiles = [];
 
-            const response = await fetch('/convert-to-pdf', {
-                method: 'POST',
-                body: formData
-            });
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
 
-            if (response.ok) {
-                const result = await response.json();
-                document.getElementById('message').innerHTML = `PDF created! <a href="${result.pdfUrl}" target="_blank">Download PDF</a>`;
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(Array.from(e.dataTransfer.files));
+        });
+
+        fileInput.addEventListener('change', () => handleFiles(Array.from(fileInput.files)));
+
+        function handleFiles(files) {
+            selectedFiles = files.filter(f => /\.(jpg|jpeg)$/i.test(f.name));
+            updateFileCount();
+            clearMessage();
+        }
+
+        function updateFileCount() {
+            if (selectedFiles.length > 0) {
+                fileCount.textContent = t('fileCount', { count: selectedFiles.length });
+                fileCount.style.display = 'block';
             } else {
-                document.getElementById('message').innerText = "An error occurred during conversion.";
+                fileCount.style.display = 'none';
+            }
+        }
+
+        // ── Conversion ────────────────────────────────────────────
+        const convertButton  = document.getElementById('convertButton');
+        const progressWrap   = document.getElementById('progressWrap');
+        const progressLabel  = document.getElementById('progressLabel');
+        const messageEl      = document.getElementById('message');
+        const HISTORY_FILENAME_PREFIX = 'jpg-to-pdf';
+        const MAX_HISTORY_BYTES = 50 * 1024 * 1024;
+        const activeHistoryUrls = new Set();
+
+        convertButton.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) {
+                showMessage(t('noFiles'), 'error');
+                return;
+            }
+
+            setLoading(true);
+            clearMessage();
+            progressLabel.textContent = t('converting', { count: selectedFiles.length });
+
+            try {
+                const timestamp = Date.now();
+                const sortedFiles = getSortedFiles(selectedFiles);
+                const pdfBytes = await createPdfFromFiles(sortedFiles);
+                const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                const fileName = `${HISTORY_FILENAME_PREFIX}-${timestamp}.pdf`;
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+
+                showDownloadMessage(pdfUrl, fileName);
+                await saveHistory({
+                    timestamp,
+                    fileCount: sortedFiles.length,
+                    fileName,
+                    pdfBlob,
+                    pdfSize: pdfBlob.size
+                });
+                await renderHistory();
+            } catch (err) {
+                console.error('PDF conversion failed:', err);
+                showMessage(t('error'), 'error');
+            } finally {
+                setLoading(false);
             }
         });
+
+        function getSortedFiles(files) {
+            return [...files].sort((a, b) => {
+                const numA = parseInt(a.name.match(/(\d+)/)?.[0] ?? 0, 10);
+                const numB = parseInt(b.name.match(/(\d+)/)?.[0] ?? 0, 10);
+                return numA - numB;
+            });
+        }
+
+        async function createPdfFromFiles(files) {
+            if (!window.PDFLib?.PDFDocument) {
+                throw new Error('pdf-lib is not available');
+            }
+
+            const pdfDoc = await PDFLib.PDFDocument.create();
+
+            for (const file of files) {
+                const image = await embedImageFromFile(pdfDoc, file);
+                const width = image.width;
+                const height = image.height;
+                const page = pdfDoc.addPage([width, height]);
+                page.drawImage(image, { x: 0, y: 0, width, height });
+            }
+
+            return pdfDoc.save();
+        }
+
+        async function embedImageFromFile(pdfDoc, file) {
+            const imageBytes = await file.arrayBuffer();
+            const mimeType = (file.type || '').toLowerCase();
+
+            if (mimeType === 'image/png') {
+                return pdfDoc.embedPng(imageBytes);
+            }
+
+            try {
+                return await pdfDoc.embedJpg(imageBytes);
+            } catch (err) {
+                const pngBytes = await rasterizeImageToPng(file);
+                return pdfDoc.embedPng(pngBytes);
+            }
+        }
+
+        async function rasterizeImageToPng(file) {
+            const objectUrl = URL.createObjectURL(file);
+
+            try {
+                const img = await loadImage(objectUrl);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    throw new Error('Canvas 2D context unavailable');
+                }
+
+                ctx.drawImage(img, 0, 0);
+                const pngBlob = await new Promise((resolve, reject) => {
+                    canvas.toBlob(blob => {
+                        if (blob) {
+                            resolve(blob);
+                        } else {
+                            reject(new Error('Canvas export failed'));
+                        }
+                    }, 'image/png');
+                });
+
+                return pngBlob.arrayBuffer();
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        }
+
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error(`Unable to decode image: ${src}`));
+                img.src = src;
+            });
+        }
+
+        function showDownloadMessage(pdfUrl, fileName) {
+            const a = document.createElement('a');
+            a.href = pdfUrl;
+            a.download = fileName;
+            a.textContent = t('download');
+            messageEl.textContent = `${t('success')} `;
+            messageEl.appendChild(a);
+            messageEl.className = 'success';
+            messageEl.style.display = 'block';
+        }
+
+        function setLoading(on) {
+            convertButton.disabled = on;
+            progressWrap.style.display = on ? 'block' : 'none';
+        }
+
+        function showMessage(text, type) {
+            messageEl.textContent = text;
+            messageEl.className = type;
+            messageEl.style.display = 'block';
+        }
+
+        function clearMessage() {
+            messageEl.textContent = '';
+            messageEl.className = '';
+            messageEl.style.display = 'none';
+        }
+
+        // ── User Guide Modal ──────────────────────────────────────
+        const guideBtn      = document.getElementById('guideBtn');
+        const modalOverlay  = document.getElementById('modalOverlay');
+        const modalClose    = document.getElementById('modalClose');
+
+        guideBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
+        modalClose.addEventListener('click', () => modalOverlay.classList.remove('open'));
+        modalOverlay.addEventListener('click', e => {
+            if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') modalOverlay.classList.remove('open');
+        });
+
+        // ── Online / Offline banner ───────────────────────────────
+        const banner = document.getElementById('banner');
+        const ONLINE_BANNER_DURATION_MS = 3000;
+        let bannerTimerId = null;
+
+        function clearBanner() {
+            if (bannerTimerId) {
+                clearTimeout(bannerTimerId);
+                bannerTimerId = null;
+            }
+            banner.textContent = '';
+            banner.className = '';
+        }
+
+        function setBannerState(state) {
+            clearBanner();
+
+            if (state === 'offline') {
+                banner.textContent = t('offlineBanner');
+                banner.className = 'offline';
+                return;
+            }
+
+            if (state === 'online') {
+                banner.textContent = t('onlineBanner');
+                banner.className = 'online';
+                bannerTimerId = setTimeout(clearBanner, ONLINE_BANNER_DURATION_MS);
+            }
+        }
+
+        function updateOnlineStatus() {
+            setBannerState(navigator.onLine ? '' : 'offline');
+        }
+
+        window.addEventListener('offline', () => setBannerState('offline'));
+        window.addEventListener('online', () => setBannerState('online'));
+
+        // ── PWA Install prompt ────────────────────────────────────
+        const installBtn = document.getElementById('installBtn');
+        let deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') installBtn.style.display = 'none';
+            deferredPrompt = null;
+        });
+
+        window.addEventListener('appinstalled', () => { installBtn.style.display = 'none'; });
+
+        // ── IndexedDB History ─────────────────────────────────────
+        const DB_NAME = 'jpgToPdfDB';
+        const DB_VERSION = 1;
+        const STORE = 'conversions';
+        let db = null;
+
+        function revokeHistoryUrls() {
+            activeHistoryUrls.forEach(url => URL.revokeObjectURL(url));
+            activeHistoryUrls.clear();
+        }
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = e => {
+                    const store = e.target.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+                    store.createIndex('timestamp', 'timestamp');
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror   = e => reject(e.target.error);
+            });
+        }
+
+        async function saveHistory(entry) {
+            if (!db) return;
+            await new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).add(entry);
+                tx.oncomplete = resolve;
+                tx.onerror    = e => reject(e.target.error);
+            });
+
+            await pruneHistoryStorage();
+        }
+
+        async function loadHistory() {
+            if (!db) return [];
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readonly');
+                const req = tx.objectStore(STORE).index('timestamp').getAll();
+                req.onsuccess = e => resolve(e.target.result.reverse());
+                req.onerror   = e => reject(e.target.error);
+            });
+        }
+
+        async function loadHistoryOldestFirst() {
+            if (!db) return [];
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readonly');
+                const req = tx.objectStore(STORE).index('timestamp').getAll();
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror   = e => reject(e.target.error);
+            });
+        }
+
+        async function clearHistory() {
+            if (!db) return;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).clear();
+                tx.oncomplete = resolve;
+                tx.onerror    = e => reject(e.target.error);
+            });
+        }
+
+        function getEntrySize(entry) {
+            return entry.pdfSize || entry.pdfBlob?.size || 0;
+        }
+
+        async function deleteHistoryEntries(ids) {
+            if (!db || ids.length === 0) return;
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                const store = tx.objectStore(STORE);
+                ids.forEach(id => store.delete(id));
+                tx.oncomplete = resolve;
+                tx.onerror    = e => reject(e.target.error);
+            });
+        }
+
+        async function pruneHistoryStorage() {
+            const entries = await loadHistoryOldestFirst();
+            let totalBytes = entries.reduce((sum, entry) => sum + getEntrySize(entry), 0);
+
+            if (totalBytes <= MAX_HISTORY_BYTES) {
+                return;
+            }
+
+            const idsToDelete = [];
+            while (entries.length > 1 && totalBytes > MAX_HISTORY_BYTES) {
+                const oldestEntry = entries.shift();
+                idsToDelete.push(oldestEntry.id);
+                totalBytes -= getEntrySize(oldestEntry);
+            }
+
+            await deleteHistoryEntries(idsToDelete);
+        }
+
+        async function renderHistory() {
+            const entries = await loadHistory();
+            const card    = document.getElementById('historyCard');
+            const list    = document.getElementById('historyList');
+            const empty   = document.getElementById('historyEmpty');
+            const titleEl = document.getElementById('historyTitleText');
+            const clearEl = document.getElementById('clearHistoryBtn');
+            const filesLabel = t('historyFiles');
+
+            titleEl.textContent = t('historyTitle');
+            clearEl.textContent = t('historyClear');
+            list.innerHTML = '';
+            revokeHistoryUrls();
+
+            if (entries.length === 0) {
+                card.style.display = 'block';
+                empty.style.display = 'block';
+                empty.textContent = t('historyEmpty');
+                return;
+            }
+
+            card.style.display = 'block';
+            empty.style.display = 'none';
+
+            entries.forEach(entry => {
+                const li = document.createElement('li');
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleString();
+                const href = entry.pdfBlob
+                    ? URL.createObjectURL(entry.pdfBlob)
+                    : entry.pdfUrl;
+                const fileName = entry.fileName || href?.split('/').pop() || `${HISTORY_FILENAME_PREFIX}-${entry.timestamp}.pdf`;
+
+                if (entry.pdfBlob) {
+                    activeHistoryUrls.add(href);
+                }
+
+                li.innerHTML = `
+                    <span>${entry.fileCount} ${filesLabel}</span>
+                    <span>
+                        <a href="${href}" download="${fileName}">${fileName}</a>
+                        <span class="hist-time">${timeStr}</span>
+                    </span>`;
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+            await clearHistory();
+            await renderHistory();
+        });
+
+        window.addEventListener('beforeunload', revokeHistoryUrls);
+
+        // ── Init ──────────────────────────────────────────────────
+        initLang();
+        applyTranslations();
+        updateOnlineStatus();
+        openDB().then(async d => { db = d; await renderHistory(); }).catch(console.error);
     </script>
 </body>
 </html>
