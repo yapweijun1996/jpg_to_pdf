@@ -98,7 +98,10 @@ button {
 .app-shell {
     max-width: var(--page-width);
     margin: 0 auto;
-    padding: 28px 18px 48px;
+    padding-top: max(28px, env(safe-area-inset-top));
+    padding-bottom: max(48px, env(safe-area-inset-bottom));
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
 }
 
 .panel {
@@ -896,16 +899,19 @@ button {
         flex-direction: column;
     }
 
-    .history-controls,
-    .summary-strip,
-    .result-meta {
+    .history-controls {
         grid-template-columns: 1fr;
+    }
+
+    .result-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 680px) {
     .app-shell {
-        padding-inline: 14px;
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
     }
 
     .app-header,
@@ -940,4 +946,166 @@ button {
     .history-actions > * {
         flex: 1 1 auto;
     }
+
+    /* Install button: keep compact, don't stretch to full width */
+    .header-actions > .install-button {
+        flex: 0 0 auto;
+    }
+
+    .result-meta {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* ─── Dark theme ─────────────────────────────────────────── */
+
+[data-theme="dark"] {
+    --bg: #111c15;
+    --bg-accent: #192c1f;
+    --panel: rgba(20, 34, 24, 0.94);
+    --panel-strong: #1c2e22;
+    --ink: #e0ede4;
+    --muted: #7a9e87;
+    --line: rgba(255, 255, 255, 0.09);
+    --line-strong: rgba(255, 255, 255, 0.15);
+    --green: #3db870;
+    --green-deep: #56d086;
+    --green-soft: rgba(61, 184, 112, 0.18);
+    --amber: #d49820;
+    --amber-soft: rgba(212, 152, 32, 0.2);
+    --red: #e05865;
+    --red-soft: rgba(224, 88, 101, 0.2);
+    --blue: #55aae8;
+    --blue-soft: rgba(85, 170, 232, 0.2);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 16px 32px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+    background:
+        radial-gradient(circle at top left, rgba(43, 138, 87, 0.12), transparent 28%),
+        radial-gradient(circle at top right, rgba(36, 95, 138, 0.08), transparent 22%),
+        linear-gradient(180deg, #121e16 0%, #0e1a12 36%, #0b1710 100%);
+}
+
+[data-theme="dark"] body::before {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+[data-theme="dark"] .panel {
+    background: var(--panel);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme="dark"] .select-wrap {
+    background: rgba(28, 46, 34, 0.92);
+}
+
+[data-theme="dark"] .icon-button {
+    background: rgba(28, 46, 34, 0.92);
+}
+
+[data-theme="dark"] .secondary-button {
+    background: #1c2e22;
+}
+
+[data-theme="dark"] .ghost-button {
+    background: transparent;
+}
+
+[data-theme="dark"] .status-banner {
+    background: rgba(24, 42, 30, 0.86);
+}
+
+[data-theme="dark"] .drop-zone {
+    background:
+        linear-gradient(180deg, rgba(20, 38, 26, 0.9), rgba(15, 30, 20, 0.82)),
+        radial-gradient(circle at top, rgba(43, 138, 87, 0.15), transparent 56%);
+}
+
+[data-theme="dark"] .summary-pill,
+[data-theme="dark"] .result-meta-card,
+[data-theme="dark"] .history-meta-chip {
+    background: rgba(28, 46, 34, 0.84);
+}
+
+[data-theme="dark"] .selected-item {
+    background: rgba(24, 42, 30, 0.9);
+}
+
+[data-theme="dark"] .mini-button {
+    background: #1c2e22;
+}
+
+[data-theme="dark"] .result-panel {
+    background:
+        linear-gradient(180deg, rgba(30, 58, 40, 0.85), rgba(20, 40, 28, 0.9)),
+        rgba(20, 40, 28, 0.92);
+    border-color: rgba(61, 184, 112, 0.2);
+}
+
+[data-theme="dark"] .result-skipped {
+    background: rgba(28, 46, 34, 0.78);
+}
+
+[data-theme="dark"] .storage-card {
+    background: rgba(24, 42, 30, 0.82);
+}
+
+[data-theme="dark"] .history-controls input {
+    background: rgba(28, 46, 34, 0.92);
+    color: var(--ink);
+}
+
+[data-theme="dark"] .history-item {
+    background: rgba(24, 42, 30, 0.92);
+}
+
+[data-theme="dark"] .action-link {
+    background: #1c2e22;
+}
+
+[data-theme="dark"] .action-link.primary {
+    background: var(--green);
+    color: #fff;
+}
+
+[data-theme="dark"] .modal-overlay {
+    background: rgba(4, 12, 7, 0.6);
+}
+
+[data-theme="dark"] .modal {
+    background: #1a2e22;
+}
+
+[data-theme="dark"] .workspace-main[data-state="converting"] {
+    background:
+        linear-gradient(180deg, rgba(20, 50, 30, 0.95), rgba(20, 40, 28, 0.92)),
+        rgba(20, 40, 28, 0.94);
+}
+
+[data-theme="dark"] .workspace-main[data-state="success"] {
+    background:
+        linear-gradient(180deg, rgba(24, 58, 34, 0.96), rgba(20, 40, 28, 0.92)),
+        rgba(20, 40, 28, 0.94);
+}
+
+[data-theme="dark"] .workspace-main[data-state="partial"] {
+    background:
+        linear-gradient(180deg, rgba(50, 38, 14, 0.52), rgba(20, 40, 28, 0.92)),
+        rgba(20, 40, 28, 0.94);
+}
+
+[data-theme="dark"] .workspace-main[data-state="error"] {
+    background:
+        linear-gradient(180deg, rgba(58, 20, 22, 0.45), rgba(20, 40, 28, 0.92)),
+        rgba(20, 40, 28, 0.94);
+}
+
+[data-theme="dark"] .progress-bar,
+[data-theme="dark"] .storage-bar {
+    background: rgba(255, 255, 255, 0.1);
 }

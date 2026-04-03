@@ -33,6 +33,7 @@
 
     async function init() {
         cacheElements();
+        initTheme();
         initLanguageSelect();
         bindEvents();
         applyTranslations();
@@ -42,10 +43,23 @@
         registerServiceWorker();
     }
 
+    function initTheme() {
+        const saved = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setTheme(saved || (prefersDark ? "dark" : "light"));
+    }
+
+    function setTheme(theme) {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem("theme", theme);
+        el.themeBtn.textContent = theme === "dark" ? "☀" : "☾";
+        el.themeBtn.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+    }
+
     function cacheElements() {
         [
             "appEyebrow", "titleText", "appSubtitle", "langLabelText", "langSelect",
-            "guideBtn", "installBtn", "networkBanner", "appBanner", "appBannerText",
+            "themeBtn", "guideBtn", "installBtn", "networkBanner", "appBanner", "appBannerText",
             "appBannerAction", "workspaceKicker", "dropTitle", "dropDescription",
             "workspaceMain", "dropZone", "dropHint", "chooseFilesBtn", "fileInput", "selectionSummaryStrip",
             "selectedFilesLabel", "selectedFilesValue", "selectedPagesLabel", "selectedPagesValue",
@@ -84,6 +98,10 @@
             renderResult();
             renderHistory();
             updateConnectivityBanner();
+        });
+
+        el.themeBtn.addEventListener("click", () => {
+            setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
         });
 
         el.guideBtn.addEventListener("click", openGuide);
